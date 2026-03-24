@@ -6,7 +6,7 @@ Real-time visualization of Claude Code agent orchestration. Watch your agents th
 
 ## Why Agent Flow?
 
-We built Agent Flow while developing [CraftMyGame](https://craftmygame.com) — a game creation platform driven by AI agents. Debugging agent behavior was painful, so we made it visual. Now we're sharing it.
+I built Agent Flow while developing [CraftMyGame](https://craftmygame.com), a game creation platform driven by AI agents. Debugging agent behavior was painful, so we made it visual. Now we're sharing it.
 
 Claude Code is powerful, but its execution is a black box — you see the final result, not the journey. Agent Flow makes the invisible visible:
 
