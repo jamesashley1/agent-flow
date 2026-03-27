@@ -7,14 +7,22 @@ dist
 
 # Auto-generated
 extension/README.md
+scripts/.dev-relay.js
+scripts/.dev-relay.js.map
 next-env.d.ts
 *.tsbuildinfo
 
 # Local IDE config
 extension/.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
 
 # Claude Code
 .claude/
 
-# Subdirectory lock files (project uses pnpm)
+# Subdirectory lock files (project uses pnpm workspace)
 extension/package-lock.json
+
+.DS_Store
