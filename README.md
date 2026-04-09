@@ -1,6 +1,6 @@
 # Agent Flow
 
-Native macOS app for real-time visualization of Claude Code agent sessions. Watch agents think, branch, call tools, and coordinate — rendered as an interactive node graph with multiple visual themes.
+Native macOS app for real-time visualization of Claude Code and OpenAI Codex agent sessions. Watch agents think, branch, call tools, and coordinate — rendered as an interactive node graph with multiple visual themes.
 
 > **Forked from [patoles/agent-flow](https://github.com/patoles/agent-flow)** — the original web-based visualizer built by [Simon Patole](https://github.com/patoles) for [CraftMyGame](https://craftmygame.com). This fork replaces the web app and VS Code extension with a standalone native macOS application built in Swift/SwiftUI, adds support for Apple's Xcode coding assistant alongside Claude Code CLI, and introduces multiple visual themes.
 
