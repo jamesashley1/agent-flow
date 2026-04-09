@@ -14,6 +14,7 @@ The upstream project is a **Next.js web app + VS Code extension** that visualize
 - **Native rendering** — SwiftUI Canvas with custom 2D renderers for each theme (no browser, no Electron, no WebView)
 - **Direct transcript reading** — the app watches `~/.claude/projects/` directly for JSONL transcript files, no hook server or relay needed
 - **Xcode support** — also watches `~/Library/Developer/Xcode/CodingAssistant/` for sessions from Apple Intelligence's Claude coding assistant in Xcode 26+
+- **OpenAI Codex support** — visualizes Codex CLI sessions (`~/.codex/sessions/`) and Xcode's Codex coding assistant sessions, with a dedicated transcript parser for the Codex JSONL format
 - **Multiple visual themes** — 9 distinct rendering styles (the original had one)
 - **Xcode adapter** — bridge scripts for translating Xcode assistant conversation logs into Agent Flow events
 
@@ -82,12 +83,14 @@ Industrial mechanical hologram — amber-orange cylinders with pipe connectors a
 
 ## How It Works
 
-Agent Flow watches two directories for Claude session transcripts:
+Agent Flow watches multiple directories for session transcripts:
 
 | Source | Directory | Auto-detected |
 |--------|-----------|---------------|
 | **Claude Code CLI** | `~/.claude/projects/` | Yes |
-| **Xcode Coding Assistant** | `~/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/projects/` | Yes |
+| **Claude via Xcode** | `~/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/projects/` | Yes |
+| **OpenAI Codex CLI** | `~/.codex/sessions/` | Yes |
+| **Codex via Xcode** | `~/Library/Developer/Xcode/CodingAssistant/codex/sessions/` | Yes |
 
 When a session is active, the app tails the JSONL transcript files and translates each entry into visualization events: agent spawns, tool calls, messages, subagent dispatch/return, context updates, and completions.
 
@@ -186,7 +189,7 @@ To preview without a live session, click **Demo** in the top-right corner.
 ## Requirements
 
 - macOS 14+ (Sonoma)
-- Claude Code CLI and/or Xcode 26+ with Claude coding assistant
+- Claude Code CLI, OpenAI Codex CLI, and/or Xcode 26+ with coding assistant
 
 ## Project Structure
 

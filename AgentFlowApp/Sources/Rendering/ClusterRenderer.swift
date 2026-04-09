@@ -104,9 +104,17 @@ struct ClusterRenderer {
         theme: Theme
     ) {
         let fontSize = max(10, 12 * zoom)
-        let iconName = cluster.source == .xcode ? "hammer.fill" : "terminal.fill"
-        let statusSuffix = cluster.isActive ? "" : "  \(Image(systemName: "checkmark.circle.fill"))"
-        let labelText = Text("\(Image(systemName: iconName))  \(cluster.label)\(statusSuffix)")
+        let iconName: String
+        switch cluster.source {
+        case .xcode: iconName = "hammer.fill"
+        case .codex: iconName = "chevron.left.forwardslash.chevron.right"
+        case .cli: iconName = "terminal.fill"
+        }
+        var composed = Text(Image(systemName: iconName)) + Text("  \(cluster.label)")
+        if !cluster.isActive {
+            composed = composed + Text("  ") + Text(Image(systemName: "checkmark.circle.fill"))
+        }
+        let labelText = composed
             .font(.system(size: fontSize, weight: .semibold, design: .monospaced))
             .foregroundStyle(accentColor.opacity(0.85 * dim))
 

@@ -255,6 +255,12 @@ final class SimulationEngine {
         agent.radius = isMain ? 32 : 22
         agent.spawnTime = state.time
 
+        // Update cluster label if a better one arrived
+        if let sessionId, let sessionLabel, let existing = state.clusters[sessionId],
+           existing.label != sessionLabel {
+            state.clusters[sessionId]?.label = sessionLabel
+        }
+
         // Ensure cluster exists for this session
         if let sessionId, state.clusters[sessionId] == nil {
             let clusterIndex = state.clusters.count

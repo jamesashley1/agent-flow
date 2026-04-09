@@ -5,9 +5,22 @@ import Foundation
 enum EventSource: String, CaseIterable {
     case cli = "CLI"
     case xcode = "Xcode"
+    case codex = "Codex"
 }
 
 // MARK: - Watched Session
+
+private enum SessionParser {
+    case claude(TranscriptParser)
+    case codex(CodexTranscriptParser)
+
+    func processLine(_ line: String, sessionId: String?) -> [AgentEvent] {
+        switch self {
+        case .claude(let p): return p.processLine(line, sessionId: sessionId)
+        case .codex(let p): return p.processLine(line, sessionId: sessionId)
+        }
+    }
+}
 
 private struct WatchedSession {
     let filePath: String
@@ -16,7 +29,7 @@ private struct WatchedSession {
     let label: String
     var fileHandle: FileHandle?
     var fileOffset: UInt64 = 0
-    var parser = TranscriptParser()
+    var parser: SessionParser
 }
 
 // MARK: - Session Watcher
@@ -40,7 +53,9 @@ final class SessionWatcher {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         self.searchDirs = [
             ("\(home)/.claude/projects", .cli),
-            ("\(home)/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/projects", .xcode)
+            ("\(home)/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/projects", .xcode),
+            ("\(home)/.codex/sessions", .codex),
+            ("\(home)/Library/Developer/Xcode/CodingAssistant/codex/sessions", .codex)
         ]
     }
 
@@ -91,23 +106,29 @@ final class SessionWatcher {
 
         for (dir, source) in searchDirs {
             guard fm.fileExists(atPath: dir) else { continue }
-            guard let projectDirs = try? fm.contentsOfDirectory(atPath: dir) else { continue }
 
-            for projectDir in projectDirs {
-                let projectPath = "\(dir)/\(projectDir)"
-                var isDir: ObjCBool = false
-                guard fm.fileExists(atPath: projectPath, isDirectory: &isDir), isDir.boolValue else { continue }
+            if source == .codex {
+                // Codex uses nested date dirs: sessions/YYYY/MM/DD/*.jsonl
+                findJsonlFiles(in: dir, source: source, cutoff: cutoff, fm: fm, into: &foundFiles)
+            } else {
+                // Claude Code uses: projects/<encoded-path>/*.jsonl
+                guard let projectDirs = try? fm.contentsOfDirectory(atPath: dir) else { continue }
+                for projectDir in projectDirs {
+                    let projectPath = "\(dir)/\(projectDir)"
+                    var isDir: ObjCBool = false
+                    guard fm.fileExists(atPath: projectPath, isDirectory: &isDir), isDir.boolValue else { continue }
 
-                guard let files = try? fm.contentsOfDirectory(atPath: projectPath) else { continue }
-                for file in files where file.hasSuffix(".jsonl") {
-                    let filePath = "\(projectPath)/\(file)"
-                    guard let attrs = try? fm.attributesOfItem(atPath: filePath),
-                          let modDate = attrs[.modificationDate] as? Date,
-                          modDate > cutoff else { continue }
+                    guard let files = try? fm.contentsOfDirectory(atPath: projectPath) else { continue }
+                    for file in files where file.hasSuffix(".jsonl") {
+                        let filePath = "\(projectPath)/\(file)"
+                        guard let attrs = try? fm.attributesOfItem(atPath: filePath),
+                              let modDate = attrs[.modificationDate] as? Date,
+                              modDate > cutoff else { continue }
 
-                    let sessionId = String(file.dropLast(6))
-                    let label = deriveLabel(projectDir: projectDir, source: source)
-                    foundFiles.append((filePath, sessionId, modDate, source, label))
+                        let sessionId = String(file.dropLast(6))
+                        let label = deriveLabel(projectDir: projectDir, source: source)
+                        foundFiles.append((filePath, sessionId, modDate, source, label))
+                    }
                 }
             }
         }
@@ -131,11 +152,50 @@ final class SessionWatcher {
         isConnected = !sessions.isEmpty
     }
 
+    /// Recursively find .jsonl files in a directory tree (for Codex's date-based layout)
+    private func findJsonlFiles(
+        in dir: String, source: EventSource, cutoff: Date,
+        fm: FileManager, into results: inout [(path: String, sessionId: String, date: Date, source: EventSource, label: String)],
+        depth: Int = 0
+    ) {
+        guard depth < 5 else { return }
+        guard let entries = try? fm.contentsOfDirectory(atPath: dir) else { return }
+
+        for entry in entries {
+            let fullPath = "\(dir)/\(entry)"
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: fullPath, isDirectory: &isDir) else { continue }
+
+            if isDir.boolValue {
+                findJsonlFiles(in: fullPath, source: source, cutoff: cutoff, fm: fm, into: &results, depth: depth + 1)
+            } else if entry.hasSuffix(".jsonl") {
+                guard let attrs = try? fm.attributesOfItem(atPath: fullPath),
+                      let modDate = attrs[.modificationDate] as? Date,
+                      modDate > cutoff else { continue }
+
+                let sessionId = String(entry.dropLast(6))
+                // Initial label from filename — will be updated with project name after parsing
+                let label = "Codex"
+                results.append((fullPath, sessionId, modDate, source, label))
+            }
+        }
+    }
+
     private func deriveLabel(projectDir: String, source: EventSource) -> String {
-        let parts = projectDir.split(separator: "-").map(String.init)
-        let meaningful = parts.last ?? projectDir
-        let prefix = source == .xcode ? "Xcode" : "CLI"
-        return "\(prefix): \(meaningful)"
+        // projectDir is like "-Users-jamesashley1-source-repos-DrawThis"
+        // Decode: split on path separators encoded as "-", take the last path component
+        let decoded = projectDir
+            .replacingOccurrences(of: "--", with: "\u{0}") // preserve double-dash
+            .split(separator: "-")
+            .joined(separator: "/")
+            .replacingOccurrences(of: "\u{0}", with: "-")
+        let projectName = (decoded as NSString).lastPathComponent
+        let name = projectName.isEmpty ? projectDir : projectName
+        switch source {
+        case .xcode: return "Xcode Claude: \(name)"
+        case .codex: return "Codex: \(name)"
+        case .cli: return "Claude CLI: \(name)"
+        }
     }
 
     // MARK: - File Tailing
@@ -143,8 +203,12 @@ final class SessionWatcher {
     private func startTailing(filePath: String, sessionId: String, source: EventSource, label: String) {
         guard let handle = FileHandle(forReadingAtPath: filePath) else { return }
 
+        let parser: SessionParser = source == .codex
+            ? .codex(CodexTranscriptParser())
+            : .claude(TranscriptParser())
+
         var session = WatchedSession(
-            filePath: filePath, sessionId: sessionId, source: source, label: label, fileHandle: handle
+            filePath: filePath, sessionId: sessionId, source: source, label: label, fileHandle: handle, parser: parser
         )
 
         let existingData = handle.readDataToEndOfFile()
@@ -178,14 +242,37 @@ final class SessionWatcher {
 
     private func processData(_ data: Data, sessionId: String) {
         guard let text = String(data: data, encoding: .utf8) else { return }
-        guard let session = sessions[sessionId] else { return }
+        guard var session = sessions[sessionId] else { return }
 
-        let lines = text.components(separatedBy: "\n")
+        let lines = text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+
+        // Pre-scan: extract project name from Codex session_meta before emitting events,
+        // so the first agent_spawn gets the correct label
+        if case .codex(let parser) = session.parser, parser.projectName == nil {
+            for line in lines {
+                if line.contains("\"session_meta\""), let data = line.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let payload = json["payload"] as? [String: Any],
+                   let cwd = payload["cwd"] as? String {
+                    let name = (cwd as NSString).lastPathComponent
+                    if !name.isEmpty {
+                        let prefix = session.source == .xcode ? "Xcode Codex" : "Codex"
+                        let newLabel = "\(prefix): \(name)"
+                        session = WatchedSession(
+                            filePath: session.filePath, sessionId: session.sessionId,
+                            source: session.source, label: newLabel,
+                            fileHandle: session.fileHandle, fileOffset: session.fileOffset,
+                            parser: session.parser
+                        )
+                        sessions[sessionId] = session
+                    }
+                    break
+                }
+            }
+        }
+
         for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-
-            let events = session.parser.processLine(trimmed, sessionId: sessionId)
+            let events = session.parser.processLine(line, sessionId: sessionId)
             for event in events {
                 onEvent?(event, sessionId, session.label, session.source)
             }
