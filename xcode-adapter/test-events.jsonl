@@ -1,0 +1,14 @@
+{"time":0,"type":"agent_spawn","payload":{"name":"main","parent":null,"task":"Refactor BuildViewController"},"sessionId":"xcode-test-001"}
+{"time":50,"type":"model_detected","payload":{"model":"claude-opus-4-6"},"sessionId":"xcode-test-001"}
+{"time":120,"type":"message","payload":{"role":"user","text":"Refactor BuildViewController to use async/await."},"sessionId":"xcode-test-001"}
+{"time":340,"type":"tool_call_start","payload":{"id":"t1","name":"Read","args":{"file":"BuildViewController.swift"}},"sessionId":"xcode-test-001"}
+{"time":420,"type":"tool_call_end","payload":{"id":"t1","name":"Read","result":"@objc class BuildViewController: UIViewController { ... 412 lines ... }"},"sessionId":"xcode-test-001"}
+{"time":510,"type":"tool_call_start","payload":{"id":"t2","name":"Grep","args":{"pattern":"completionHandler"}},"sessionId":"xcode-test-001"}
+{"time":680,"type":"tool_call_end","payload":{"id":"t2","name":"Grep","result":"6 matches in BuildViewController.swift"},"sessionId":"xcode-test-001"}
+{"time":720,"type":"subagent_dispatch","payload":{"parent":"main","child":"swift-refactor","task":"Convert closures to async"},"sessionId":"xcode-test-001"}
+{"time":722,"type":"agent_spawn","payload":{"name":"swift-refactor","parent":"main","task":"Convert closures to async"},"sessionId":"xcode-test-001"}
+{"time":1400,"type":"tool_call_start","payload":{"id":"t3","name":"Edit","args":{"file":"BuildViewController.swift"}},"sessionId":"xcode-test-001"}
+{"time":1520,"type":"tool_call_end","payload":{"id":"t3","name":"Edit","result":"6 replacements made"},"sessionId":"xcode-test-001"}
+{"time":1600,"type":"subagent_return","payload":{"name":"swift-refactor","result":"done"},"sessionId":"xcode-test-001"}
+{"time":1700,"type":"message","payload":{"role":"assistant","text":"Refactored 6 callsites to async/await."},"sessionId":"xcode-test-001"}
+{"time":1750,"type":"agent_complete","payload":{"name":"main"},"sessionId":"xcode-test-001"}

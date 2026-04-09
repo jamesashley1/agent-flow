@@ -1,119 +1,93 @@
 # Agent Flow
 
-Real-time visualization of Claude Code agent orchestration. Watch your agents think, branch, and coordinate as they work. [Demo video here](https://www.youtube.com/watch?v=Ud6eDrFN-TA). 
+Real-time visualization of Claude Code agent orchestration. Watch your agents think, branch, and coordinate as they work.
 
-![Agent Flow visualization](https://res.cloudinary.com/dxlvclh9c/image/upload/v1773924941/screenshot_e7yox3.png)
+## Overview
 
-## Why Agent Flow?
+Agent Flow is a native macOS app that visualizes Claude Code sessions as an interactive node graph. See agents spawn, tool calls execute, subagents coordinate, and context windows fill — all in real time.
 
-I built Agent Flow while developing [CraftMyGame](https://craftmygame.com), a game creation platform driven by AI agents. Debugging agent behavior was painful, so we made it visual. Now we're sharing it.
+### Features
 
-Claude Code is powerful, but its execution is a black box — you see the final result, not the journey. Agent Flow makes the invisible visible:
-
-- **Understand agent behavior** — See how Claude breaks down problems, which tools it reaches for, and how subagents coordinate
-- **Debug tool call chains** — When something goes wrong, trace the exact sequence of decisions and tool calls that led there
-- **See where time is spent** — Identify slow tool calls, unnecessary branching, or redundant work at a glance
-- **Learn by watching** — Build intuition for how to write better prompts by observing how Claude interprets and executes them
-
-## Features
-
-- **Live agent visualization**: Watch agent execution as an interactive node graph with real-time tool calls, branching, and return flows
-- **Auto-detect Claude Code sessions**: Automatically discovers active Claude Code sessions in your workspace and streams events
-- **Claude Code hooks**: Lightweight HTTP hook server receives events directly from Claude Code for zero-latency streaming
-- **Multi-session support**: Track multiple concurrent agent sessions with tabs
-- **Interactive canvas**: Pan, zoom, click agents and tool calls to inspect details
-- **Timeline & transcript panels**: Review the full execution timeline, file attention heatmap, and message transcript
-- **JSONL log file support**: Point at any JSONL event log to replay or watch agent activity
-
-## Getting Started
-
-### Standalone Web App (no VS Code required)
-
-Use Agent Flow directly in your browser — works with Claude Code in any terminal.
-
-```bash
-git clone https://github.com/patoles/agent-flow.git
-cd agent-flow
-pnpm i
-pnpm run setup      # configure Claude Code hooks (one-time)
-pnpm run dev        # start the web app + event relay
-```
-
-Open http://localhost:3000 and start a Claude Code session in another terminal — events will stream to the browser in real-time.
-
-### VS Code Extension
-
-1. Install the extension
-2. Open the Command Palette (`Cmd+Shift+P`) and run **Agent Flow: Open Agent Flow**
-3. Start a Claude Code session in your workspace — Agent Flow will auto-detect it
-
-Agent Flow automatically configures Claude Code hooks the first time you open the panel. To manually reconfigure, run **Agent Flow: Configure Claude Code Hooks** from the Command Palette.
-
-### JSONL Event Log
-
-You can also point Agent Flow at a JSONL event log file:
-
-1. Set `agentVisualizer.eventLogPath` in your VS Code settings to the path of a `.jsonl` file
-2. Agent Flow will tail the file and visualize events as they arrive
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `Agent Flow: Open Agent Flow` | Open the visualizer panel |
-| `Agent Flow: Open Agent Flow to Side` | Open in a side editor column |
-| `Agent Flow: Connect to Running Agent` | Manually connect to an agent session |
-| `Agent Flow: Configure Claude Code Hooks` | Set up Claude Code hooks for live streaming |
-
-## Keyboard Shortcut
-
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+Alt+A` (Mac) / `Ctrl+Alt+A` (Win/Linux) | Open Agent Flow |
-
-## Settings
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `agentVisualizer.devServerPort` | `0` | Development server port (0 = production mode) |
-| `agentVisualizer.eventLogPath` | `""` | Path to a JSONL event log file to watch |
-| `agentVisualizer.autoOpen` | `false` | Auto-open when an agent session starts |
+- **Live session detection** — Automatically discovers active Claude Code sessions by watching `~/.claude/projects/`
+- **Multiple visual themes** — Holograph, Tron, Circuit, Astral, Organism, Tactical, and more
+- **Interactive canvas** — Pan, zoom, click agents and tool calls to inspect details
+- **Multi-session support** — Track concurrent agent sessions from CLI and Xcode
+- **Xcode integration** — Visualize Xcode's built-in Claude assistant via the xcode-adapter bridge
+- **Demo mode** — Built-in demo scenario to preview the visualization without a live session
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) 20+ (LTS recommended)
-- [pnpm](https://pnpm.io/)
-- Claude Code CLI
-- For the VS Code extension: a VSCode-compatible IDE 1.85+ (e.g. [VS Code](https://code.visualstudio.com/), [Cursor](https://cursor.sh/), [Windsurf](https://windsurf.com/))
+- macOS 14+ (Sonoma)
+- Swift 5.9+
+- Claude Code CLI (for live visualization)
 
-## Development
+## Getting Started
+
+### Build & Run
 
 ```bash
-pnpm i              # install dependencies for all packages
-pnpm run setup      # configure Claude Code hooks (one-time)
-pnpm run dev        # start dev server + event relay
+cd AgentFlowApp
+swift build
+swift run
 ```
 
-`pnpm run dev` starts both the Next.js dev server and an event relay that receives Claude Code events and streams them to the browser via SSE.
+Or open `AgentFlowApp/Package.swift` in Xcode and run the target.
 
-Other scripts:
+### Live Mode
 
-| Script | Description |
-|--------|-------------|
-| `pnpm run dev:demo` | Start with demo/mock data |
-| `pnpm run dev:relay` | Run the event relay server standalone |
-| `pnpm run dev:extension` | Watch-build the extension |
-| `pnpm run build:all` | Production build (webview + extension) |
-| `pnpm run build:web` | Build the Next.js web app |
-| `pnpm run build:extension` | Build the extension |
-| `pnpm run build:webview` | Build the webview assets |
+1. Launch Agent Flow
+2. Start a Claude Code session in any terminal
+3. Agent Flow auto-detects the session and streams events in real time
 
-## Author
+### Demo Mode
 
-Created by [Simon Patole](https://github.com/patoles), for [CraftMyGame](https://craftmygame.com).
+Click the **Demo** toggle in the top-right corner to see a sample multi-agent session.
+
+## Xcode Assistant Bridge
+
+To visualize Xcode's built-in Claude coding assistant (Xcode 26+), use the xcode-adapter:
+
+```bash
+# Terminal 1: tail Xcode assistant logs and write bridge events
+node xcode-adapter/bridge.js
+
+# Terminal 2: forward bridge events to Agent Flow (if using the relay pipeline)
+node xcode-adapter/event-log-tail.js
+```
+
+See `xcode-adapter/README.md` for details on configuration and testing.
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / Pause |
+| `F` | Zoom to fit |
+| `G` | Toggle grid |
+| `S` | Toggle stats |
+| `P` | Toggle plan/task panel |
+| `1-4` | Playback speed (0.5x, 1x, 2x, 4x) |
+| `D/Shift+D` | Decrease/increase detail level |
+| `Esc` | Deselect |
+
+## Project Structure
+
+```
+AgentFlowApp/
+  Sources/
+    AgentFlowApp.swift          # App entry point
+    Models/                     # Agent, simulation state, themes
+    Views/                      # SwiftUI views and canvas
+    Rendering/                  # Theme-specific renderers
+    Simulation/                 # Engine, transcript parser, session watcher
+xcode-adapter/
+  bridge.js                     # Tails Xcode assistant logs -> JSONL events
+  event-log-tail.js             # Forwards JSONL events to hook server
+  swift-summarizer.ts           # Swift/xcodebuild-aware tool summarizer
+```
 
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE) for details.
 
-The name "Agent Flow" and associated logos are trademarks of Simon Patole. See [TRADEMARK.md](TRADEMARK.md) for usage guidelines.
+Based on [agent-flow](https://github.com/patoles/agent-flow) by [Simon Patole](https://github.com/patoles).

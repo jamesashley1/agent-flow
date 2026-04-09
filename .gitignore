@@ -1,28 +1,16 @@
 node_modules
-dist
-.vite
-*.local
-.next
-*.vsix
+.DS_Store
 
-# Auto-generated
-extension/README.md
-scripts/.dev-relay.js
-scripts/.dev-relay.js.map
-next-env.d.ts
-*.tsbuildinfo
+# Swift
+AgentFlowApp/.build/
+.swiftpm/
 
-# Local IDE config
-extension/.vscode/
-.vscode/*
-!.vscode/launch.json
-!.vscode/tasks.json
-!.vscode/settings.json
+# Xcode adapter state
+xcode-adapter/*.state.json
+xcode-adapter/*-offset
+
+# Build output
+dist/
 
 # Claude Code
 .claude/
-
-# Subdirectory lock files (project uses pnpm workspace)
-extension/package-lock.json
-
-.DS_Store
